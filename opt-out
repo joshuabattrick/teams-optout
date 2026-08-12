@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unsubscribe</title>
+<style>
+  :root{--lime:#DDFC9D;--blue:#4A5FF7;--bg:#F8F7F3;--ink:#555553;--muted:#9B9A96;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--bg);color:var(--ink);
+       font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       display:flex;align-items:center;justify-content:center;min-height:100vh;}
+  .card{background:#fff;max-width:440px;margin:24px;padding:32px;
+        border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .bar{height:8px;border-radius:6px;background:var(--lime);margin-bottom:24px;}
+  h1{font-size:20px;font-weight:600;color:var(--blue);margin:0 0 12px;}
+  p{font-size:15px;line-height:1.6;margin:0 0 12px;}
+  a{color:var(--blue);}
+  .fallback{font-size:13px;color:var(--muted);margin-top:20px;}
+  .btn{display:inline-block;margin-top:8px;padding:10px 16px;background:var(--blue);
+       color:#fff;text-decoration:none;border-radius:8px;font-size:15px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="bar"></div>
+  <div id="content"><h1>One moment…</h1><p>Processing your request.</p></div>
+</div>
+<script>
+(function () {
+  // The Zapier webhook that records the opt-out (baked in for you).
+  var HOOK = "https://hooks.zapier.com/hooks/catch/21933299/46j1rbj/";
+  var SUPPORT = "https://support.multiverse.io/en/";
+  var content = document.getElementById('content');
+
+  function show(title, html) { content.innerHTML = '<h1>' + title + '</h1>' + html; }
+
+  // The token rides in the URL fragment (#e=...&s=...). Browsers keep the part
+  // after "#" local, so it is never sent to this page's host - only to Zapier.
+  var params = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  var e = params.get('e');
+  var s = params.get('s');
+
+  if (!e || !s) {
+    show("Link not recognised",
+      '<p>We couldn\'t read this opt-out link. If you\'d still like to stop receiving ' +
+      'these messages, please contact us via the ' +
+      '<a href="' + SUPPORT + '">support hub</a>.</p>');
+    return;
+  }
+
+  // Hand the token to Zapier in the background.
+  var body = new URLSearchParams();
+  body.set('e', e);
+  body.set('s', s);
+
+  var sent = false;
+  try { if (navigator.sendBeacon) { sent = navigator.sendBeacon(HOOK, body); } }
+  catch (err) { sent = false; }
+
+  if (!sent) {
+    try {
+      fetch(HOOK, { method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString() });
+      sent = true;
+    } catch (err2) { sent = false; }
+  }
+
+  // Reliable fallback the user can click if the background hand-off didn't fire.
+  var manual = HOOK + '?e=' + encodeURIComponent(e) + '&s=' + encodeURIComponent(s);
+
+  if (sent) {
+    show("You've been unsubscribed",
+      '<p>You won\'t receive any more of these Teams messages from us. ' +
+      'You can close this tab.</p>' +
+      '<p class="fallback">Not sure it worked? ' +
+      '<a href="' + manual + '">Click here to confirm</a>.</p>');
+  } else {
+    show("One more tap to unsubscribe",
+      '<p>Please confirm you\'d like to stop receiving these messages.</p>' +
+      '<p><a class="btn" href="' + manual + '">Confirm unsubscribe</a></p>');
+  }
+})();
+</script>
+</body>
+</html>
